@@ -65,13 +65,51 @@ router.post("/", async (req, res) => {
   }
 });
 
+// POST a new comment to post :id
+router.post("/:id/comments", async (req, res) => {
+  //  [1.] see if there is a post to post the comment to
+  //  --> if not, 404 -> message:
+  const postFound = await db.findById(req.params.id);
+  if (postFound.length < 1) {
+    res
+      .status(404)
+      .json({ message: "The post with the specified ID does not exist." });
+  }
+  // console.log("newComment", newComment);
+
+  //  [2.] check if client sent 'text' data in the body
+  //  --> if not, 400 -> errorMessage
+  req.body.text === undefined &&
+    res
+      .status(400)
+      .json({ errorMessage: "Please provide comment on 'text' property" });
+
+  //  [3] idk if this is necessary?
+  //  --> I like to insertComment(<something_legible>)
+  const newComment = { post_id: req.params.id, text: req.body.text };
+  console.log("newComment", newComment);
+
+  //  [4.] try to insertComment([3])
+  //  --> saved_id: response from db.insertComment --> should be unique
+  //  --> catch errors while saving
+  try {
+    const savedComment = await db.insertComment(newComment);
+    console.log("savedComment", savedComment);
+    res.status(201).json({ ...newComment, saved_id: savedComment["id"] });
+  } catch {
+    res.status(500).json({
+      error: "There was an error while saving the comment to the database",
+    });
+  }
+});
+
 // DELETE a post based on :id
 router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    //  1. see if there is any (and all) posts with :id to delete
+    //  [1.] see if there is any (and all) posts with :id to delete
     const toDelete = await db.findById(id);
-    //  2. try to remove :id from db --> returns 1 if it removed something
+    //  [2.] try to remove :id from db --> returns 1 if it removed something
     const deleted = await db.remove(id);
     if (deleted < 1) {
       return res
