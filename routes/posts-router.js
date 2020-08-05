@@ -103,6 +103,46 @@ router.post("/:id/comments", async (req, res) => {
   }
 });
 
+// PUT --> update post (title + content both needed)
+router.put("/:id", async (req, res) => {
+  //  [1.] make sure post is there to edit
+  const postFound = await db.findById(req.params.id);
+  if (postFound.length < 1) {
+    res
+      .status(404)
+      .json({ message: "The post with the specified ID does not exist." });
+  }
+
+  //  [2.] make sure contents + title keys are both there
+  let req_contents = req.body.contents;
+  let req_title = req.body.title;
+  if (!req_contents || !req_title) {
+    res.status(400).json({
+      errorMessage: "Please provide both 'title' and 'contents' properties",
+    });
+  }
+  try {
+    //  [3.] try --> to_update post :id with {request body}
+    //  --> if nothing to_update ... 500 --> post not modified
+    //  --> if something to_update ... 200 --> {message, updated}
+    const to_update = await db.update(req.params.id, { ...req.body });
+    const updated_post = await db.findById(req.params.id);
+    if (to_update < 1) {
+      res
+        .status(500)
+        .json({ error: "The post information could not be modified." });
+    }
+    res.status(200).json({
+      message: `${to_update} post was modified`,
+      updated: { ...updated_post },
+    });
+  } catch {
+    res.status(500).json({
+      error: "There was an error while saving the comment to the database",
+    });
+  }
+});
+
 // DELETE a post based on :id
 router.delete("/:id", async (req, res) => {
   try {
